@@ -19,7 +19,7 @@ struct SensorData {
     std::string down_right;
 };
 
-// Classe para mapear o labirinto usando DFS ou exploração
+// Classe para mapear o labirinto usando Algoritmo de Trémaux
 class Mapper {
 public:
     Mapper(int estimated_width, int estimated_height);
@@ -31,8 +31,8 @@ public:
     MazeGraph& get_graph() { return graph_; }
     const MazeGraph& get_graph() const { return graph_; }
     
-    // Encontrar próxima posição não explorada (fronteira)
-    Position find_next_exploration_target(const Position& current);
+    // Algoritmo de Trémaux: decidir próximo movimento
+    std::string tremaux_next_move(const Position& current_pos, const SensorData& sensor);
     
     // Verificar se a exploração está completa
     bool is_exploration_complete() const;
@@ -40,16 +40,19 @@ public:
     // Marcar célula como visitada
     void mark_visited(const Position& pos);
     
+    // Obter contador de visitas de uma posição
+    int get_visit_count(const Position& pos) const;
+    
 private:
     MazeGraph graph_;
-    std::unordered_set<Position, Position::Hash> visited_;
-    std::unordered_set<Position, Position::Hash> frontier_;
+    std::unordered_map<Position, int, Position::Hash> visit_count_;  // Contador de visitas (Trémaux)
+    std::vector<Position> path_history_;  // Histórico do caminho
     
     // Converter string do sensor em CellType
     CellType sensor_string_to_cell_type(const std::string& sensor_value) const;
     
-    // Adicionar posições de fronteira (células desconhecidas adjacentes a conhecidas)
-    void update_frontier(const Position& pos);
+    // Verificar se uma direção é válida (não parede, não muito visitada)
+    bool is_direction_valid(const std::string& direction, const SensorData& sensor) const;
 };
 
 } // namespace maze_solver

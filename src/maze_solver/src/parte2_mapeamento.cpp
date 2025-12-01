@@ -6,15 +6,17 @@
 #include "maze_solver/mapper.hpp"
 #include <chrono>
 #include <thread>
+#include <fstream>
 
 using namespace std::chrono_literals;
 
 class Parte2Mapeamento : public rclcpp::Node {
 public:
     Parte2Mapeamento() : Node("parte2_mapeamento"), 
-                         mapper_(100, 100),  // Tamanho estimado do mapa
-                         robot_pos_(0, 0),
-                         target_found_(false) {
+                         mapper_(50, 50),  // Tamanho estimado menor
+                         robot_pos_(1, 1),  // Posição inicial corrigida
+                         target_found_(false),
+                         exploration_moves_(0) {
         
         // Subscriber para sensores
         sensor_sub_ = this->create_subscription<cg_interfaces::msg::RobotSensors>(
@@ -31,7 +33,8 @@ public:
             RCLCPP_INFO(this->get_logger(), "Aguardando serviço /move_command...");
         }
         
-        RCLCPP_INFO(this->get_logger(), "Aguardando dados dos sensores...");
+        RCLCPP_INFO(this->get_logger(), "✓ Serviços prontos");
+        RCLCPP_INFO(this->get_logger(), "📡 Aguardando dados dos sensores...");
         std::this_thread::sleep_for(1s);
         
         // Executar mapeamento e navegação
@@ -52,90 +55,146 @@ private:
         sensor_received_ = true;
     }
     
+    void save_mapped_area(const std::string& filename) {
+        std::ofstream file(filename);
+        auto& graph = mapper_.get_graph();
+        auto robot = graph.get_robot_position();
+        auto target = graph.get_target_position();
+        
+        for (int y = 0; y < graph.get_height(); y++) {
+            for (int x = 0; x < graph.get_width(); x++) {
+                if (x == robot.x && y == robot.y) {
+                    file << "R";
+                } else if (x == target.x && y == target.y) {
+                    file << "T";
+                } else {
+                    auto cell = graph.get_cell(x, y);
+                    if (cell == maze_solver::CellType::WALL) {
+                        file << "#";
+                    } else if (cell == maze_solver::CellType::EMPTY) {
+                        file << ".";
+                    } else if (cell == maze_solver::CellType::UNKNOWN) {
+                        file << "?";
+                    } else {
+                        file << "?";
+                    }
+                }
+            }
+            file << "\n";
+        }
+        file.close();
+    }
+    
     void run() {
         // Fase 1: Mapeamento por exploração
-        RCLCPP_INFO(this->get_logger(), "Iniciando fase de mapeamento...");
+        RCLCPP_INFO(this->get_logger(), "");
+        RCLCPP_INFO(this->get_logger(), "🗺️  === FASE 1: EXPLORAÇÃO E MAPEAMENTO ===");
         explore_maze();
         
         if (!target_found_) {
-            RCLCPP_ERROR(this->get_logger(), "Alvo não encontrado durante mapeamento!");
+            RCLCPP_ERROR(this->get_logger(), "❌ Alvo não encontrado durante mapeamento!");
             return;
         }
         
+        auto target = mapper_.get_graph().get_target_position();
+        RCLCPP_INFO(this->get_logger(), "");
         RCLCPP_INFO(this->get_logger(), "✓ Mapeamento concluído!");
-        RCLCPP_INFO(this->get_logger(), "Alvo encontrado em: (%d, %d)", 
-                   mapper_.get_graph().get_target_position().x,
-                   mapper_.get_graph().get_target_position().y);
+        RCLCPP_INFO(this->get_logger(), "   Total de movimentos de exploração: %d", exploration_moves_);
+        RCLCPP_INFO(this->get_logger(), "   Alvo encontrado em: (%d, %d)", target.x, target.y);
+        
+        // Salvar mapa explorado
+        save_mapped_area("/tmp/maze_mapped.txt");
+        RCLCPP_INFO(this->get_logger(), "💾 Mapa explorado salvo em: /tmp/maze_mapped.txt");
         
         // Fase 2: Navegar usando o mapa criado
-        RCLCPP_INFO(this->get_logger(), "\nIniciando navegação com mapa criado...");
+        RCLCPP_INFO(this->get_logger(), "");
+        RCLCPP_INFO(this->get_logger(), "🧭 === FASE 2: NAVEGAÇÃO COM MAPA CRIADO ===");
+        RCLCPP_INFO(this->get_logger(), "   Aguardando 2 segundos...");
+        std::this_thread::sleep_for(2s);
+        
         navigate_to_target();
         
-        RCLCPP_INFO(this->get_logger(), "✓ Missão concluída!");
+        RCLCPP_INFO(this->get_logger(), "");
+        RCLCPP_INFO(this->get_logger(), "🎉 Missão concluída com sucesso!");
     }
     
     void explore_maze() {
-        int moves = 0;
-        const int max_moves = 1000;
+        int max_moves = 500;  // Reduzido para 500
+        int moves_without_new_cells = 0;
         
-        while (moves < max_moves && rclcpp::ok()) {
+        RCLCPP_INFO(this->get_logger(), "   🧭 Usando Algoritmo de Trémaux");
+        RCLCPP_INFO(this->get_logger(), "   Iniciando exploração...");
+        RCLCPP_INFO(this->get_logger(), "   Posição inicial: (%d, %d)", robot_pos_.x, robot_pos_.y);
+        
+        while (exploration_moves_ < max_moves && rclcpp::ok()) {
             // Aguardar dados do sensor
             wait_for_sensor();
             
             // Atualizar mapa com dados do sensor
             mapper_.update_from_sensor(robot_pos_, last_sensor_data_);
+            mapper_.mark_visited(robot_pos_);
             
-            // Verificar se encontrou o alvo
-            if (last_sensor_data_.up == "target" || last_sensor_data_.down == "target" ||
-                last_sensor_data_.left == "target" || last_sensor_data_.right == "target") {
-                target_found_ = true;
-                RCLCPP_INFO(this->get_logger(), "🎯 Alvo encontrado!");
+            // Log periódico
+            if (exploration_moves_ % 20 == 0 && exploration_moves_ > 0) {
+                int visits = mapper_.get_visit_count(robot_pos_);
+                RCLCPP_INFO(this->get_logger(), "   📊 Mov: %d | Pos: (%d, %d) | Visitas: %d", 
+                           exploration_moves_, robot_pos_.x, robot_pos_.y, visits);
             }
             
-            // Se alvo encontrado e já exploramos bastante, podemos parar
-            if (target_found_ && moves > 50) {
-                break;
+            // Verificar se encontrou o alvo nos sensores
+            if (last_sensor_data_.up == "t" || last_sensor_data_.down == "t" ||
+                last_sensor_data_.left == "t" || last_sensor_data_.right == "t") {
+                
+                if (!target_found_) {
+                    target_found_ = true;
+                    RCLCPP_INFO(this->get_logger(), "   🎯 Alvo detectado! Indo até ele...");
+                    
+                    // Ir direto para o alvo
+                    std::string direction_to_target = "";
+                    if (last_sensor_data_.up == "t") direction_to_target = "up";
+                    else if (last_sensor_data_.down == "t") direction_to_target = "down";
+                    else if (last_sensor_data_.left == "t") direction_to_target = "left";
+                    else if (last_sensor_data_.right == "t") direction_to_target = "right";
+                    
+                    if (!direction_to_target.empty()) {
+                        if (send_move_command(direction_to_target)) {
+                            update_robot_position(direction_to_target);
+                            exploration_moves_++;
+                            RCLCPP_INFO(this->get_logger(), "   ✓ Alvo alcançado na exploração!");
+                        } else {
+                            RCLCPP_INFO(this->get_logger(), "   ✓ Já estamos no alvo!");
+                        }
+                    }
+                    break;  // Parar exploração
+                }
             }
             
-            // Decidir próximo movimento (exploração simples)
-            std::string next_move = decide_exploration_move();
+            // Decidir próximo movimento usando Trémaux
+            std::string next_move = mapper_.tremaux_next_move(robot_pos_, last_sensor_data_);
             
             if (next_move.empty()) {
-                RCLCPP_INFO(this->get_logger(), "Exploração completa ou sem movimentos válidos");
+                RCLCPP_WARN(this->get_logger(), "   ⚠️  Trémaux: Sem movimentos válidos");
+                RCLCPP_INFO(this->get_logger(), "   Posição atual: (%d, %d)", robot_pos_.x, robot_pos_.y);
+                RCLCPP_INFO(this->get_logger(), "   Sensores: up=%s down=%s left=%s right=%s",
+                           last_sensor_data_.up.c_str(), last_sensor_data_.down.c_str(),
+                           last_sensor_data_.left.c_str(), last_sensor_data_.right.c_str());
                 break;
             }
             
             // Executar movimento
             if (send_move_command(next_move)) {
                 update_robot_position(next_move);
-                moves++;
-                
-                if (moves % 10 == 0) {
-                    RCLCPP_INFO(this->get_logger(), "Movimentos de exploração: %d", moves);
-                }
+                exploration_moves_++;
+            } else {
+                RCLCPP_WARN(this->get_logger(), "   ⚠️  Falha ao executar: %s", next_move.c_str());
             }
             
             std::this_thread::sleep_for(100ms);
         }
-    }
-    
-    std::string decide_exploration_move() {
-        // Estratégia simples: preferir células não visitadas
-        std::vector<std::pair<std::string, std::string>> moves = {
-            {"up", last_sensor_data_.up},
-            {"right", last_sensor_data_.right},
-            {"down", last_sensor_data_.down},
-            {"left", last_sensor_data_.left}
-        };
         
-        // Primeiro, tentar ir para células vazias
-        for (const auto& [direction, sensor] : moves) {
-            if (sensor == "empty" || sensor == "0" || sensor == "target" || sensor == "3") {
-                return direction;
-            }
+        if (exploration_moves_ >= max_moves) {
+            RCLCPP_WARN(this->get_logger(), "   ⚠️  Limite de %d movimentos atingido", max_moves);
         }
-        
-        return "";
     }
     
     void navigate_to_target() {
@@ -143,32 +202,66 @@ private:
         auto start = robot_pos_;
         auto goal = graph.get_target_position();
         
-        RCLCPP_INFO(this->get_logger(), "Calculando rota otimizada...");
-        RCLCPP_INFO(this->get_logger(), "De (%d, %d) até (%d, %d)", 
+        RCLCPP_INFO(this->get_logger(), "   Calculando rota otimizada...");
+        RCLCPP_INFO(this->get_logger(), "   De: (%d, %d) → Até: (%d, %d)", 
                    start.x, start.y, goal.x, goal.y);
+        
+        // Verificar se já está no alvo
+        if (start.x == goal.x && start.y == goal.y) {
+            RCLCPP_INFO(this->get_logger(), "   ✓ Já estamos no alvo! Navegação desnecessária.");
+            return;
+        }
+        
+        // Verificar se está adjacente ao alvo (distância Manhattan = 1)
+        int distance = abs(start.x - goal.x) + abs(start.y - goal.y);
+        if (distance == 1) {
+            RCLCPP_INFO(this->get_logger(), "   ✓ Alvo está ao lado! Um movimento apenas.");
+            std::string final_move = "";
+            if (goal.x > start.x) final_move = "right";
+            else if (goal.x < start.x) final_move = "left";
+            else if (goal.y > start.y) final_move = "down";
+            else if (goal.y < start.y) final_move = "up";
+            
+            if (!final_move.empty() && send_move_command(final_move)) {
+                RCLCPP_INFO(this->get_logger(), "   ✓ Alvo alcançado!");
+                return;
+            }
+        }
         
         maze_solver::PathFinder pathfinder(graph);
         auto path = pathfinder.find_path(start, goal);
         
         if (path.empty()) {
-            RCLCPP_ERROR(this->get_logger(), "Não foi possível encontrar caminho!");
+            RCLCPP_ERROR(this->get_logger(), "   ❌ Não foi possível encontrar caminho!");
+            RCLCPP_ERROR(this->get_logger(), "   O mapa pode estar incompleto");
+            save_mapped_area("/tmp/maze_mapped_failed.txt");
+            RCLCPP_ERROR(this->get_logger(), "   Veja /tmp/maze_mapped_failed.txt");
             return;
         }
         
-        RCLCPP_INFO(this->get_logger(), "Caminho encontrado: %zu passos", path.size());
+        RCLCPP_INFO(this->get_logger(), "   ✓ Caminho encontrado: %zu passos", path.size());
         
         // Converter e executar comandos
         auto commands = pathfinder.path_to_commands(path);
+        RCLCPP_INFO(this->get_logger(), "   Comandos: %zu", commands.size());
+        
+        // Mostrar primeiros comandos
+        RCLCPP_INFO(this->get_logger(), "   Primeiros comandos:");
+        for (size_t i = 0; i < std::min(size_t(5), commands.size()); i++) {
+            RCLCPP_INFO(this->get_logger(), "     [%zu] %s", i, commands[i].c_str());
+        }
+        
+        RCLCPP_INFO(this->get_logger(), "");
         execute_commands(commands);
     }
     
     void execute_commands(const std::vector<std::string>& commands) {
         for (size_t i = 0; i < commands.size(); i++) {
-            RCLCPP_INFO(this->get_logger(), "[%zu/%zu] Movendo: %s", 
+            RCLCPP_INFO(this->get_logger(), "   📍 [%zu/%zu] %s", 
                        i + 1, commands.size(), commands[i].c_str());
             
             if (!send_move_command(commands[i])) {
-                RCLCPP_ERROR(this->get_logger(), "Falha ao executar comando");
+                RCLCPP_ERROR(this->get_logger(), "   ❌ Falha ao executar comando");
                 return;
             }
             
@@ -197,6 +290,10 @@ private:
         else if (direction == "left") robot_pos_.x--;
         else if (direction == "right") robot_pos_.x++;
         
+        // Garantir que a posição não fique negativa
+        if (robot_pos_.x < 0) robot_pos_.x = 0;
+        if (robot_pos_.y < 0) robot_pos_.y = 0;
+        
         mapper_.get_graph().set_robot_position(robot_pos_);
     }
     
@@ -218,6 +315,7 @@ private:
     maze_solver::Position robot_pos_;
     bool sensor_received_ = false;
     bool target_found_ = false;
+    int exploration_moves_;
 };
 
 int main(int argc, char** argv) {
