@@ -1,9 +1,9 @@
 #include "rclcpp/rclcpp.hpp"
 #include "cg_interfaces/srv/move_cmd.hpp"
 #include "cg_interfaces/msg/robot_sensors.hpp"
-#include "maze_solver/graph.hpp"
-#include "maze_solver/pathfinder.hpp"
-#include "maze_solver/mapper.hpp"
+#include "labirinteiro/graph.hpp"
+#include "labirinteiro/pathfinder.hpp"
+#include "labirinteiro/mapper.hpp"
 #include <chrono>
 #include <thread>
 #include <fstream>
@@ -69,11 +69,11 @@ private:
                     file << "T";
                 } else {
                     auto cell = graph.get_cell(x, y);
-                    if (cell == maze_solver::CellType::WALL) {
+                    if (cell == labirinteiro::CellType::WALL) {
                         file << "#";
-                    } else if (cell == maze_solver::CellType::EMPTY) {
+                    } else if (cell == labirinteiro::CellType::EMPTY) {
                         file << ".";
-                    } else if (cell == maze_solver::CellType::UNKNOWN) {
+                    } else if (cell == labirinteiro::CellType::UNKNOWN) {
                         file << "?";
                     } else {
                         file << "?";
@@ -228,7 +228,7 @@ private:
             }
         }
         
-        maze_solver::PathFinder pathfinder(graph);
+        labirinteiro::PathFinder pathfinder(graph);
         auto path = pathfinder.find_path(start, goal);
         
         if (path.empty()) {
@@ -310,9 +310,9 @@ private:
     rclcpp::Subscription<cg_interfaces::msg::RobotSensors>::SharedPtr sensor_sub_;
     rclcpp::Client<cg_interfaces::srv::MoveCmd>::SharedPtr move_client_;
     
-    maze_solver::Mapper mapper_;
-    maze_solver::SensorData last_sensor_data_;
-    maze_solver::Position robot_pos_;
+    labirinteiro::Mapper mapper_;
+    labirinteiro::SensorData last_sensor_data_;
+    labirinteiro::Position robot_pos_;
     bool sensor_received_ = false;
     bool target_found_ = false;
     int exploration_moves_;

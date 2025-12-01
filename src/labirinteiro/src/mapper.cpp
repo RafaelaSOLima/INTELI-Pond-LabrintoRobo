@@ -1,8 +1,8 @@
-#include "maze_solver/mapper.hpp"
-#include "maze_solver/pathfinder.hpp"
+#include "labirinteiro/mapper.hpp"
+#include "labirinteiro/pathfinder.hpp"
 #include <algorithm>
 
-namespace maze_solver {
+namespace labirinteiro {
 
 Mapper::Mapper(int estimated_width, int estimated_height) 
     : graph_(estimated_width, estimated_height) {}
@@ -146,4 +146,4 @@ bool Mapper::is_exploration_complete() const {
     return (target.x != 0 || target.y != 0);
 }
 
-} // namespace maze_solver
+} // namespace labirinteiro

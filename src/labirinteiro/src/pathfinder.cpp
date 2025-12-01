@@ -1,8 +1,8 @@
-#include "maze_solver/pathfinder.hpp"
+#include "labirinteiro/pathfinder.hpp"
 #include <algorithm>
 #include <cmath>
 
-namespace maze_solver {
+namespace labirinteiro {
 
 PathFinder::PathFinder(const MazeGraph& graph) : graph_(graph) {}
 
@@ -113,4 +113,4 @@ std::vector<std::string> PathFinder::path_to_commands(const std::vector<Position
     return commands;
 }
 
-} // namespace maze_solver
+} 

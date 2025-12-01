@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(maze_solver)
+project(labirinteiro)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -15,26 +15,26 @@ find_package(std_msgs REQUIRED)
 include_directories(include)
 
 # Library with common code (STATIC para evitar problemas de linking)
-add_library(maze_solver_lib STATIC
+add_library(labirinteiro_lib STATIC
   src/graph.cpp
   src/pathfinder.cpp
   src/mapper.cpp
 )
 
-ament_target_dependencies(maze_solver_lib
+ament_target_dependencies(labirinteiro_lib
   rclcpp
   cg_interfaces
   std_msgs
 )
 
 # Importante: definir como position independent code
-set_target_properties(maze_solver_lib PROPERTIES
+set_target_properties(labirinteiro_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
 )
 
 # Parte 1 - Navegação com mapa
 add_executable(parte1_navegacao src/parte1_navegacao.cpp)
-target_link_libraries(parte1_navegacao maze_solver_lib)
+target_link_libraries(parte1_navegacao labirinteiro_lib)
 ament_target_dependencies(parte1_navegacao
   rclcpp
   cg_interfaces
@@ -43,7 +43,7 @@ ament_target_dependencies(parte1_navegacao
 
 # Parte 2 - Mapeamento
 add_executable(parte2_mapeamento src/parte2_mapeamento.cpp)
-target_link_libraries(parte2_mapeamento maze_solver_lib)
+target_link_libraries(parte2_mapeamento labirinteiro_lib)
 ament_target_dependencies(parte2_mapeamento
   rclcpp
   cg_interfaces

@@ -7,7 +7,7 @@ INTELI-Pond-LabrintoRobo/
 │   ├── cg/                          # Retirado do repo do Nicola
 │   ├── cg_interfaces/               # Retirado do repo do Nicola
 │   ├── cg_teleop/                   # Retirado do repo do Nicola
-│   └── maze_solver/                 # Minha Solução
+│   └── labirinteiro/                 # Minha Solução
 
 ├── build/                           # Arquivos de compilação
 ├── install/                         # Executáveis
@@ -20,8 +20,8 @@ INTELI-Pond-LabrintoRobo/
 
 ### Estrutura da Minha Solução
 ```
-src/maze_solver/
-├── include/maze_solver/
+src/labirinteiro/
+├── include/labirinteiro/
 │   ├── graph.hpp          # Estrutura de dados do grafo
 │   ├── pathfinder.hpp     # A* (Parte 1)
 │   └── mapper.hpp         # Trémaux e A* (Parte 2)
@@ -68,12 +68,12 @@ source install/setup.bash
 
 **Terminal 1 - Simulador:**
 ```bash
-ros2 run cg maze -- --map test.csv
+ros2 run cg maze -- --generate
 ```
 
 **Terminal 2 - Navegação:**
 ```bash
-ros2 run maze_solver parte1_navegacao
+ros2 run labirinteiro parte1_navegacao
 ```
 ### Rodar parte 2:
 
@@ -84,7 +84,7 @@ ros2 run cg maze -- --generate
 
 **Terminal 2 - Mapeamento:**
 ```bash
-ros2 run maze_solver parte2_mapeamento
+ros2 run labirinteiro parte2_mapeamento
 ```
 
 ### Outros comandos importantes:

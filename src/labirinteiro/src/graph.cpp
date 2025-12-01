@@ -1,8 +1,8 @@
-#include "maze_solver/graph.hpp"
+#include "labirinteiro/graph.hpp"
 #include <algorithm>
 #include <cctype>
 
-namespace maze_solver {
+namespace labirinteiro {
 
 MazeGraph::MazeGraph(int width, int height) 
     : width_(width), height_(height), robot_pos_(0, 0), target_pos_(0, 0) {
@@ -147,4 +147,4 @@ void MazeGraph::load_from_flat_data(const std::vector<std::string>& data, int wi
     }
 }
 
-} // namespace maze_solver
+} // namespace labirinteiro

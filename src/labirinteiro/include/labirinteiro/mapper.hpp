@@ -1,11 +1,11 @@
-#ifndef MAZE_SOLVER_MAPPER_HPP
-#define MAZE_SOLVER_MAPPER_HPP
+#ifndef LABIRINTEIRO_MAPPER_HPP
+#define LABIRINTEIRO_MAPPER_HPP
 
-#include "maze_solver/graph.hpp"
+#include "labirinteiro/graph.hpp"
 #include <unordered_set>
 #include <queue>
 
-namespace maze_solver {
+namespace labirinteiro {
 
 // Estrutura para dados do sensor
 struct SensorData {
@@ -55,6 +55,6 @@ private:
     bool is_direction_valid(const std::string& direction, const SensorData& sensor) const;
 };
 
-} // namespace maze_solver
+} // namespace labirinteiro
 
-#endif // MAZE_SOLVER_MAPPER_HPP
+#endif // labirinteiro_MAPPER_HPP

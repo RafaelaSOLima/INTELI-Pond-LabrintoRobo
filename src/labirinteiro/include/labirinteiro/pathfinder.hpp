@@ -1,13 +1,13 @@
-#ifndef MAZE_SOLVER_PATHFINDER_HPP
-#define MAZE_SOLVER_PATHFINDER_HPP
+#ifndef LABIRINTEIRO_PATHFINDER_HPP
+#define LABIRINTEIRO_PATHFINDER_HPP
 
-#include "maze_solver/graph.hpp"
+#include "labirinteiro/graph.hpp"
 #include <vector>
 #include <queue>
 #include <unordered_map>
 #include <string>
 
-namespace maze_solver {
+namespace labirinteiro {
 
 // Nó para o algoritmo A*
 struct AStarNode {
@@ -49,6 +49,6 @@ private:
         const Position& current) const;
 };
 
-} // namespace maze_solver
+} // namespace labirinteiro
 
-#endif // MAZE_SOLVER_PATHFINDER_HPP
+#endif // labirinteiro_PATHFINDER_HPP

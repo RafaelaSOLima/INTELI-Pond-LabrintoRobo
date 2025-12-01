@@ -1,5 +1,5 @@
-#ifndef MAZE_SOLVER_GRAPH_HPP
-#define MAZE_SOLVER_GRAPH_HPP
+#ifndef LABIRINTEIRO_GRAPH_HPP
+#define LABIRINTEIRO_GRAPH_HPP
 
 #include <vector>
 #include <unordered_map>
@@ -7,7 +7,7 @@
 #include <string>
 #include <utility>
 
-namespace maze_solver {
+namespace labirinteiro {
 
 // Estrutura para representar uma posição no labirinto
 struct Position {
@@ -79,6 +79,6 @@ private:
     Position target_pos_;
 };
 
-} // namespace maze_solver
+} // namespace labirinteiro
 
-#endif // MAZE_SOLVER_GRAPH_HPP
+#endif // labirinteiro_GRAPH_HPP

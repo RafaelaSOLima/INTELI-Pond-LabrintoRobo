@@ -1,8 +1,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "cg_interfaces/srv/get_map.hpp"
 #include "cg_interfaces/srv/move_cmd.hpp"
-#include "maze_solver/graph.hpp"
-#include "maze_solver/pathfinder.hpp"
+#include "labirinteiro/graph.hpp"
+#include "labirinteiro/pathfinder.hpp"
 #include <chrono>
 #include <thread>
 #include <set>
@@ -36,7 +36,7 @@ public:
     }
 
 private:
-    void save_map_visual(const maze_solver::MazeGraph& graph, const std::string& filename) {
+    void save_map_visual(const labirinteiro::MazeGraph& graph, const std::string& filename) {
         std::ofstream file(filename);
         auto robot = graph.get_robot_position();
         auto target = graph.get_target_position();
@@ -49,9 +49,9 @@ private:
                     file << "T";
                 } else {
                     auto cell = graph.get_cell(x, y);
-                    if (cell == maze_solver::CellType::WALL) {
+                    if (cell == labirinteiro::CellType::WALL) {
                         file << "#";
-                    } else if (cell == maze_solver::CellType::EMPTY) {
+                    } else if (cell == labirinteiro::CellType::EMPTY) {
                         file << ".";
                     } else {
                         file << "?";
@@ -105,7 +105,7 @@ private:
         
         // Passo 2: Criar grafo do labirinto
         RCLCPP_INFO(this->get_logger(), "🗺️  Criando grafo do labirinto...");
-        maze_solver::MazeGraph graph(width, height);
+        labirinteiro::MazeGraph graph(width, height);
         graph.load_from_flat_data(map_data->occupancy_grid_flattened, width, height);
         
         auto start = graph.get_robot_position();
@@ -133,7 +133,7 @@ private:
         
         // Passo 3: Encontrar caminho ótimo usando A*
         RCLCPP_INFO(this->get_logger(), "🧮 Calculando caminho ótimo (A*)...");
-        maze_solver::PathFinder pathfinder(graph);
+        labirinteiro::PathFinder pathfinder(graph);
         auto path = pathfinder.find_path(start, goal);
         
         if (path.empty()) {
